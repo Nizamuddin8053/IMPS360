@@ -13,3 +13,17 @@ const CLOUDINARY_FOLDERS = {
 };
 
 module.exports = CLOUDINARY_FOLDERS;
+
+// cloudinary structure
+//school/
+// │
+// ├── logo/
+// ├── principal/
+// ├── teachers/
+// ├── students/
+// ├── gallery/
+// ├── events/
+// ├── notices/
+// ├── achievements/
+// ├── documents/
+// └── infrastructure/
