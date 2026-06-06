@@ -1,5 +1,6 @@
 import React from "react";
 import { FaQuoteLeft, FaHistory, FaEye, FaBullseye, FaInfoCircle } from "react-icons/fa";
+import Footer from "../footer/Footer";
 
 const About = () => {
   return (
@@ -166,6 +167,8 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      <Footer/>
 
     </div>
   );

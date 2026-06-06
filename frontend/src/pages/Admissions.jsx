@@ -7,6 +7,8 @@ import {
 
 import { FaUserGraduate } from "react-icons/fa6";
 
+import Footer from "../footer/Footer";
+
 const Admissions = () => {
   const [formData, setFormData] = useState({
     studentName: "",
@@ -265,6 +267,9 @@ const Admissions = () => {
 
         </div>
       </section>
+
+
+      <Footer/>
 
     </div>
   );

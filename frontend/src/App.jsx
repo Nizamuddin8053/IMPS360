@@ -1,5 +1,4 @@
 import Header from "./header/Header";
-import Footer from "./footer/Footer";
 import AppRoutes from "./routes/AppRoutes";
 
 function App() {
@@ -10,7 +9,6 @@ function App() {
       {/* isLoggedIn={false} user = {"Nizam"} handleLogout={()=>{console.log("logout")}} */}
       <Header/>
       <AppRoutes/>
-      <Footer/>
     </div>
   )
 }

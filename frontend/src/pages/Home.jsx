@@ -9,6 +9,7 @@ import NewsSection from "../components/home/NewsSection";
 import EventsSection from "../components/home/EventsSection";
 import Testimonials from "../components/home/Testimonials";
 import AdmissionCTA from "../components/home/AdmissionCTA";
+import Footer from "../footer/Footer";
 
 
 const Home = () => {
@@ -25,6 +26,7 @@ const Home = () => {
       <EventsSection />
       <Testimonials />
       <AdmissionCTA />
+      <Footer/>
     </>
   );
 };

@@ -4,6 +4,8 @@ import {
   FaCalendarAlt, FaClipboardCheck, FaUsers, FaTasks 
 } from "react-icons/fa";
 
+import Footer from "../footer/Footer";
+
 const Academic = () => {
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800 font-sans">
@@ -259,6 +261,9 @@ const Academic = () => {
           </div>
         </div>
       </section>
+
+
+      <Footer/>
 
     </div>
   );
