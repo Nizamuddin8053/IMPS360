@@ -4,12 +4,18 @@ const Student = new mongoose.Schema({
 
     admissionNo: {
         type: String,
+        required: true,
     },
     name: {
         type: String,
+        required: true,
     },
     class: {
         type: String,
+        required: true,
+        enum: ["NURSERY", "LKG", "UKG", "KG", "1ST", "2ND", "3RD", "4TH", "5TH",
+            "6TH", "7TH", "8TH", "9TH", "10TH", "11TH"
+        ]
     },
     section: {
         type: String,
@@ -17,28 +23,39 @@ const Student = new mongoose.Schema({
     },
     dob: {
         type: Date,
+        required: true,
     },
     gender: {
         type: String,
-        enum: ["MALE", "FEMALE", "TRANSGENDER"]
+        required: true,
+        enum: ["MALE", "FEMALE", "TRANSGENDER"],
     },
     parentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Parent",
+        required: true,
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        required: true,
     },
     photo: {
         type: String,
     },
     address: {
-        type: String,
+        street: String,
+        city: String, 
+        state: String,
+        pincode: String,
     },
     phone: {
         type: String,
-    }
+        required: true,
+    },
+    createdAt: {
+        type: Date,
+    },
 
 });
 
