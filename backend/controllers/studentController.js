@@ -3,7 +3,7 @@ const Counter = require("../models/Counter");
 const User = require("../models/User");
 const Parent = require("../models/Parent");
 const mongoose = require("mongoose");
-const CLASS_PROGRESSION  = require("../utils/class_progression");
+const CLASS_PROGRESSION = require("../utils/class_progression");
 
 
 // register student
@@ -230,15 +230,15 @@ exports.updateStudent = async (req, res) => {
 
 // delete student
 
-exports.deleteStudent = async (req, res)=>{
+exports.deleteStudent = async (req, res) => {
 
     // create a session
     const session = await mongoose.startSession();
     // start transaction
     session.startTransaction();
-    try{
+    try {
         const studentUserId = req.params.id;
-        if(!userId){
+        if (!userId) {
             return res.status(400).json({
                 success: false,
                 message: "provide userId"
@@ -246,10 +246,10 @@ exports.deleteStudent = async (req, res)=>{
         }
 
         const student = await Student.findOneAndDelete(
-            {userId: studentUserId}
+            { userId: studentUserId }
         ).session(session);
 
-        if(!student){
+        if (!student) {
             // revert all changes
             session.abortTransaction();
             // end session
@@ -263,21 +263,21 @@ exports.deleteStudent = async (req, res)=>{
 
         // also delete parent of student if only one student
 
-        if(student.parentId){
+        if (student.parentId) {
 
             // count other child of parent 
-            const countSiblings = await Student.countDocuments({parentId: student.parentId}).session(session);
+            const countSiblings = await Student.countDocuments({ parentId: student.parentId }).session(session);
             // means no sibling
-            if(countSiblings === 0){
+            if (countSiblings === 0) {
                 // get parent document 
                 const parentDoc = await Parent.findById(student.parentId).session(session);
 
-                if(parentDoc){
+                if (parentDoc) {
 
-                   if(parentDoc.userId){
-                     // delete parent from user
-                     await User.findByIdAndDelete(parentDoc.userId).session(session);
-                   }
+                    if (parentDoc.userId) {
+                        // delete parent from user
+                        await User.findByIdAndDelete(parentDoc.userId).session(session);
+                    }
                 }
                 // now delete parent from Parent
                 await Parent.findByIdAndDelete(student.parentId).session(session);
@@ -300,7 +300,7 @@ exports.deleteStudent = async (req, res)=>{
             student,
         })
 
-    }catch(error){
+    } catch (error) {
 
         // revert all transactions
         session.abortTransaction();
@@ -321,16 +321,16 @@ exports.deleteStudent = async (req, res)=>{
 
 // promote student
 
-exports.promoteStudent = async (req,res)=>{
+exports.promoteStudent = async (req, res) => {
 
-    try{
+    try {
         const userId = req.params.id;
         // find student
         const student = await Student.findOne(
-            {userId: userId}
+            { userId: userId }
         );
 
-        if(!student){
+        if (!student) {
             return res.status(400).json({
                 success: false,
                 message: "student not registered"
@@ -339,20 +339,20 @@ exports.promoteStudent = async (req,res)=>{
 
         const currIdx = CLASS_PROGRESSION[student.class];
 
-        if(currIdx === -1){
+        if (currIdx === -1) {
             return res.status(400).json({
                 success: false,
                 message: `Current class '${student.class}' is not recognized in the system progression.`
             })
         }
 
-        if(currIdx = CLASS_PROGRESSION.length-1){
+        if (currIdx = CLASS_PROGRESSION.length - 1) {
             return res.status(400).json({
                 success: false,
                 message: "last class can't be promoted"
             })
-        }else{
-            student.class = CLASS_PROGRESSION[currIdx+1];
+        } else {
+            student.class = CLASS_PROGRESSION[currIdx + 1];
         }
         await student.save();
 
@@ -363,7 +363,7 @@ exports.promoteStudent = async (req,res)=>{
             student
         })
 
-    }catch(error){
+    } catch (error) {
 
         console.log("error while promoting student", error);
         return res.status(500).json({
@@ -383,7 +383,7 @@ exports.bulkPromoteClasses = async (req, res) => {
         // Iterate BACKWARDS through the sequence: 12th down to Nursery
         for (let i = CLASS_PROGRESSION.length - 1; i >= 0; i--) {
             const currentClass = CLASS_PROGRESSION[i];
-            
+
             if (currentClass === "10TH") {
                 // Graduate the senior class
                 await Student.updateMany(
@@ -397,7 +397,7 @@ exports.bulkPromoteClasses = async (req, res) => {
                     { class: currentClass },
                     { $set: { class: nextClass } }
                 );
-                
+
             }
         }
 
@@ -415,3 +415,288 @@ exports.bulkPromoteClasses = async (req, res) => {
         });
     }
 };
+
+
+// transfer student 
+
+
+
+exports.transferStudent = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { userId } = req.params;
+        const { transferType, targetClass, targetSection, remarks } = req.body;
+
+        // 1. Validate transfer type
+        if (!transferType || !["INTERNAL", "EXTERNAL"].includes(transferType.toUpperCase())) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid transferType: 'INTERNAL' or 'EXTERNAL'."
+            });
+        }
+
+        // 2. Fetch the student document
+        const student = await Student.findById(userId).session(session);
+        if (!student) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({
+                success: false,
+                message: "Student record not found."
+            });
+        }
+
+        // --- SCENARIO A: INTERNAL TRANSFER (Change Class/Section) ---
+        if (transferType.toUpperCase() === "INTERNAL") {
+            if (!targetClass || !targetSection) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Internal transfers require both targetClass and targetSection."
+                });
+            }
+
+            // Validate that the target class exists in your sequence
+            if (!CLASS_PROGRESSION.includes(targetClass)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid class name. Must be one of: ${CLASS_PROGRESSION.join(", ")}`
+                });
+            }
+
+            // Validate section against schema constraints
+            const allowedSections = ["A", "B", "C", "D"];
+            if (!allowedSections.includes(targetSection.toUpperCase())) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid section. Choose from A, B, C, or D."
+                });
+            }
+
+            // Update student credentials for the new classroom placement
+            student.class = targetClass;
+            student.section = targetSection.toUpperCase();
+            
+            // Append tracking logs to a history log if your schema tracks it
+            // student.transferHistory.push({ from: student.class, to: targetClass, date: new Date(), remarks });
+        }
+
+        // --- SCENARIO B: EXTERNAL TRANSFER (Student Leaves the School) ---
+        else if (transferType.toUpperCase() === "EXTERNAL") {
+            // Update student operational standing to LEFT instead of hard-deleting
+            student.status = "LEFT"; 
+
+            // Safeguard: Deactivate the student's User login account instantly
+            if (student.userId) {
+                await User.findByIdAndUpdate(
+                    student.userId, 
+                    { isActive: false }
+                ).session(session);
+            }
+        }
+
+        // Save updated student records within the current transaction session
+        await student.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({
+            success: true,
+            message: `Student processed for ${transferType.toLowerCase()} transfer successfully.`,
+            student
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error during student transfer pipeline:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error occurred while processing transfer.",
+            error: error.message
+        });
+    }
+};
+
+// getStudentsByClass
+
+exports.getStudentsByClass = async (req, res) => {
+
+    try {
+        const { className } = req.body;
+
+        if (!className) {
+            return res.status(400).json({
+                success: false,
+                message: "please provide class"
+            })
+        }
+
+        const students = await Student.find({ class: className })
+            .populate("parentId", "fatherName motherName phone").sort({ admissionNo: 1 });
+
+        if (students.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `students of class ${className} not added yet`,
+            })
+        }
+
+
+        return res.status(200).json({
+            success: true,
+            message: `student of class ${className} fetched successfully`,
+            students,
+        })
+    } catch (error) {
+        console.log("errror while fetching students of a class");
+        return res.status(500).json({
+            success: false,
+            message: "internal server error",
+            error: error.message
+        })
+    }
+}
+
+// regex tutorial 
+// Other Regex OptionsMongoDB uses these single-character flags in the 
+// $options string to modify search behavior
+
+// :i (Case-Insensitive): Matches both uppercase and lowercase patterns.
+
+// :m (Multiline): Alters the behavior of the ^ (start) and $ (end) anchors 
+// so they match the start and end of each line rather than just the beginning/end
+// of the whole string.
+
+// :x (Extended): Ignores all unescaped whitespace characters in the regex pattern, 
+// allowing you to format long or complex regex queries with line breaks and comments.
+
+
+// s (Single-line/Dotall): Allows the dot . operator to match all characters, 
+// including newline characters.u or
+
+//  U (Unicode): Enables full UTF-8 matching for shorthand character classes
+//   (e.g., \w, \b).How to use multiple optionsYou can combine these options into
+// a single string.
+// For example, { $regex: name, $options: "is" } enables both case 
+// insensitivity and the dotall feature.
+
+
+
+// searchStudents
+
+exports.searchStudents = async (req, res) =>{
+    try{
+
+        const {name, className, admissionNo} = req.query;
+
+        const query = {};
+
+        if(name)
+            query.name = {$regex: name, $options: "i"} // regular expression (i insensitive to handle case sensitivity)
+
+        if(className)
+            query.class = className
+        if(admissionNo)
+            query.admissionNo = admissionNo
+
+        const students = await Student.find(query)
+             .populate("parentId", "fatherName motherName phone")
+             .sort({admissionNo: 1});
+
+        if(students.length == 0){
+            return res.status(404).json({
+                success: false,
+                message: "no student found",
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            noOfStudents: students.length,
+            message: "students search successfull",
+            students,
+        })
+
+    }catch(error){
+        console.log("error while searching students", error);
+        return res.status(500).json({
+            success: false,
+            message: "internal server error",
+            error: error.message
+        })
+
+    }
+}
+// updateStudentStatus
+
+exports.updateStudentStatus = async (req, res)=>{
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try{
+        const userId = req.params.id;
+        const {status} = req.body;
+
+        if(!userId || !status){
+            return res.status(400).json({
+                success: false,
+                message: "all fields are required",
+            })
+        }
+
+        const allowedStatuses = ["ACTIVE", "PROMOTED", "DETAINED", "PASSED_OUT", "SUSPENDED", "LEFT"];
+
+        if(!allowedStatuses.includes(status.toUpperCase())){
+            return res.status(400).json({
+                success: false,
+                message: `invalid status! allowed statuses:  ${allowedStatuses.join(",")}`
+            })
+        }
+
+        const targetStatus = status.toUpperCase();
+
+        const student = await Student.findByIdAndUpdate(
+            userId,
+            {status: targetStatus},
+            {new: true, runValidators: true}
+        ).session(session);
+
+
+        if(!student){
+            session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({
+                success: false,
+                message: "student not found"
+            })
+        }
+
+
+        if(["PASSED_OUT", "SUSPENDED", "LEFT"].includes(targetStatus)){
+            await User.findByIdAndUpdate(student.userId, {isActive: false}).session(session);
+        }else if(targetStatus === "ACTIVE"){
+            await User.findByIdAndUpdate(student.userId, {isActive: true}).session(session);
+        }
+
+
+        session.commitTransaction();
+        session.endSession();
+
+    }catch(error){
+
+        session.abortTransaction();
+        session.endSession();
+
+        console.log("error while updating student status");
+        return res.status(500).json({
+            success: false,
+            message: "internal server error",
+            error: error.message
+        })
+
+    }
+}

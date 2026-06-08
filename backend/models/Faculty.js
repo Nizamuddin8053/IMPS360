@@ -3,9 +3,6 @@ const mongoose = require("mongoose");
 
 const Faculty = new mongoose.Schema({
 
-    facultyId: {
-        type: String,
-    },
     name: {
         type: String,
     },

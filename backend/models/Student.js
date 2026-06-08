@@ -45,13 +45,18 @@ const Student = new mongoose.Schema({
     },
     address: {
         street: String,
-        city: String, 
+        city: String,
         state: String,
         pincode: String,
     },
     phone: {
         type: String,
         required: true,
+    },
+    status: {
+        type: String,
+        enum: ["ACTIVE", "PROMOTED", "DETAINED", "PASSED_OUT", "SUSPENDED", "LEFT"],
+        default: "ACTIVE"
     },
     createdAt: {
         type: Date,
