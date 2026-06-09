@@ -24,7 +24,15 @@ const User = new mongoose.Schema(
         isActive: {
             type: Boolean,
             default: false
-        }
+        },
+        forgotPasswordToken: {
+            type: String,
+            default: null
+        },
+        forgotPasswordExpiry: {
+            type: Date,
+            default: null
+        },
     }
 )
 

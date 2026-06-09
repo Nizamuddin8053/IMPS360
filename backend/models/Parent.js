@@ -29,10 +29,12 @@ const Parent = new mongoose.Schema({
         state: String,
         pincode: String,
     },
-    children: { // todo: later array of students will store optimize storage(delete student will change many controllers will change)
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Student",
-    },
+    children: [
+        { // todo: later array of students will store optimize storage(delete student will change many controllers will change)
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Student",
+        },
+    ],
     emergencyContact: {
         type: String,
     },

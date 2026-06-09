@@ -32,7 +32,7 @@
 // ├── Attendance
 // ├── Results
 // ├── Notices
-// └── Students
+// └── Students(register student, register parent)
 
 
 // student dashboard

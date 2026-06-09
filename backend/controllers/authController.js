@@ -5,6 +5,8 @@ const Faculty = require("../models/Faculty");
 const TokenBlacklist = require("../models/TokenBlacklist");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const sendEmail = require('../utils/sendEmail');
 
 
 // login into system
@@ -165,6 +167,194 @@ exports.logout = async (req, res) => {
         });
     }
 };
+
+
+// forgot password
+// send password reset link
+exports.forgotPassword = async (req, res)=>{
+    try{
+        const {identifier} = req.body;
+
+        if(!identifier){
+            return res.status(400).json({
+                success: false,
+                message: "please provide a valid username"
+            })
+        }
+
+        const user = await User.findOne({
+            $or: [
+                {userId: identifier.toLowerCase().trim},
+                {email: identifier.toLowerCase().trim}
+            ]
+
+        })
+
+
+        if(!user){
+            return res.status(200).json({
+                success: true,
+                message: "If account exist with given identifier, password reset link sent"
+            })
+        }
+
+        if(!user.isActive){
+            return res.status(403).json({
+                success: false,
+                message: "This account is restricted, contact admin"
+            })
+        }
+
+        // generate a unhashed random row token
+        const rowToken = crypto.randomBytes(32).toString('hex');
+
+        // hash token
+
+        const hashedToken = crypto.createHash("sha256").update(rowToken).digest('hex');
+
+        user.forgotPasswordToken = hashedToken;
+        // 15 minute expiry
+        user.forgotPasswordExpiry = Date.now()+ 15*60*1000;
+
+        await user.save();
+
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+
+        // Compose HTML Email Content
+        const emailContent = `
+            <h1>Password Reset Request</h1>
+            <p>You requested a password reset. Click the link below to change your password. This link expires in 15 minutes.</p>
+            <a href="${resetUrl}" clicktracking=off target="_blank">${resetUrl}</a>
+            <p>If you did not request this, please ignore this email.</p>
+        `;
+
+
+        await sendEmail({
+            email: user.email,
+            subject: "Password reset link",
+            message: emailContent
+        });
+
+        return res.status(200).json({
+            succss: true,
+            message: "If account exist with given identifier, password reset link sent",
+
+        })
+
+
+    }catch(error){
+
+        console.log("error while sending password reset link")
+        return res.status(500).json({
+            success: false,
+            message: "internal server error while sending password reset link",
+            error: error.message
+        })
+
+    }
+}
+
+// reset user password using token
+// fetch token from url
+
+exports.resetPassword = async (req, res)=>{
+    try{
+        const {token} = req.params;
+        const {newPassword} = req.body;
+
+        if(!newPassword || newPassword.length<6){
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 6 characters long."
+            })
+        }
+
+        // create hashed token
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        // match stored hashed token with hashedtoken
+
+        const user = await User.findOne({
+            forgotPasswordToken: hashedToken, // check both hashedToken are same
+            forgotPasswordExpiry: {$gt: Date.now()}  // expiration time still greater then current time because I stored 15 minute late
+
+        });
+
+        if(!user){
+            return res.status(400).json({
+                success: false,
+                message: "Password reset token is invalid or has expired."
+            })
+        }
+
+        // save new password by encrypting
+
+        const salt = bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        // make null forgotPasswordToken and forgotPasswordExpiry
+
+        user.forgotPasswordToken = null;
+        user.forgotPasswordExpiry = null;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Password reset successful! You can now log into your account."
+        })
+
+
+    }catch(error){
+        console.log("password reset error", error);
+        return res.status(500).json({
+            success:false,
+            message: "internal server error",
+            error: error.message
+        })
+    }
+}
+
+
+// getCurrent user
+
+exports.getCurrentUser = async (req, res)=>{
+    try{
+
+        if(!req.user){
+            return res.status(401).json({
+                success: false,
+                message:  "Unauthorized access. No valid user session found."
+            })
+        }
+
+        const currentUser = await User.findById(req.user._id).select('-password');
+
+        if(!currentUser){
+            return res.status(404).json({
+                success: false,
+                message: "User account no longer exists in the system."
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: currentUser
+        })
+        
+    }catch(error){
+
+        console.log("error while fetching current user", error);
+        return res.status(500).json({
+            success: false,
+            message: "internal server error",
+            error: error.message
+        })
+
+    }
+}
+
 
 
 

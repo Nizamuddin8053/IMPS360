@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SchoolLogo from "../assets/logo/logo.jpeg";
 import {
   Menu,
@@ -14,6 +15,7 @@ const Navbar = ({
   handleLogout,
 }) => {
 
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const links = [
@@ -29,9 +31,15 @@ const Navbar = ({
     "Contact",
   ];
 
+  function handleLogout(){
+     navigate("/login");
+  }
+
+
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-lg">
 
+      {/* logo and school name */}
       <div className="max-w-7xl mx-auto px-4">
 
         {/* Logo Section */}
@@ -86,7 +94,8 @@ const Navbar = ({
         </div>
 
       </div>
-
+      
+      {/* if user is not logged in */}
       {!isLoggedIn && (
         <div className="bg-blue-700 text-white">
 

@@ -11,7 +11,7 @@ app.use(express.json());
 // all routes
 
 // database connection
-connectDB();
+// connectDB();
 
 app.listen(PORT, ()=>{
     console.log(`app is smoothly running on ${PORT}`);

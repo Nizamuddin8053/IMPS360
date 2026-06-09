@@ -1,5 +1,5 @@
-import { Routes, Route } from "react-router-dom";
-
+import { Routes, Route, useLocation } from "react-router-dom";
+import Header from "../header/Header";
 import Home from "../pages/Home";
 import About from "../pages/About";
 import Academics from "../pages/Academics";
@@ -16,36 +16,43 @@ import Dashboard from "../pages/Dashboard";
 import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
+  const location = useLocation();
+  const isDashboardRoute = location.pathname.startsWith("/dashboard");
+
   return (
-    <Routes>
 
-      {/* Public Routes */}
+    <>
+      {!isDashboardRoute && <Header />}
+      <Routes>
 
-      <Route path="/home" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/academics" element={<Academics />} />
-      <Route path="/admissions" element={<Admissions />} />
-      <Route path="/faculty" element={<Faculty />} />
-      <Route path="/gallery" element={<Gallery />} />
-      <Route path="/events" element={<Events />} />
-      <Route path="/achievements" element={<Achievements />} />
-      <Route path="/downloads" element={<Downloads />} />
-      <Route path="/contact" element={<Contact />} />
+        {/* Public Routes */}
 
-      <Route path="/login" element={<Login />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/academics" element={<Academics />} />
+        <Route path="/admissions" element={<Admissions />} />
+        <Route path="/faculty" element={<Faculty />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/achievements" element={<Achievements />} />
+        <Route path="/downloads" element={<Downloads />} />
+        <Route path="/contact" element={<Contact />} />
 
-      {/* Protected Route */}
+        <Route path="/login" element={<Login />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        {/* Protected Route */}
 
-    </Routes>
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+      </Routes>
+    </>
   );
 };
 
